@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<data>
+    <nodes>
+        <node nodeName="score_goal">
+            <termCond key="at ?ball1 ?t" value="True" ball1="ball1" t="goal"/>
+            <termCond key="at ?ball2 ?t" value="True" ball2="ball2" t="goal"/>
+            <termCond key="at ?ball3 ?t" value="True" ball3="ball3" t="goal"/>
+        </node>
+        <node nodeName="move">
+            <actionName>move</actionName>
+            <preCond key="at-robby ?a" value="True"/>
+            <preCond key="connected ?a ?b" value="True"/>
+            <termCond key="at-robby ?b" op="+" value="True"/>
+            <termCond key="at-robby ?a" op="-" value="True"/>
+        </node>
+         <node nodeName="kick">
+            <actionName>kick</actionName>
+            <preCond key="at-robby ?a" value="True"/>
+            <preCond key="connected ?a ?b" value="True"/>
+            <preCond key="ball ?ball" value="True"/>
+            <preCond key="at-ball ?ball ?a" value="True"/>
+            <termCond key="at-ball ?ball ?b" op="+" value="True"/>
+            <termCond key="at-ball ?ball ?a" op="-" value="True"/>
+        </node>
+    </nodes>
+    <heirarchicalEdges>
+        <heirarchicalEdge from="score_goal" to="move"/>
+        <heirarchicalEdge from="score_goal" to="kick"/>
+    </heirarchicalEdges>
+    <sequentialEdges>
+        <sequentialEdge from="score_goal" to="score_goal"/>
+    </sequentialEdges>
+</data>
