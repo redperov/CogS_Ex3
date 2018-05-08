@@ -3,7 +3,8 @@ from pddlsim.executors.executor import Executor
 from pddlsim.planner import local
 import sys
 from PlanParser import PlanParser
-from pddlsim.parser_independent import Conjunction
+from pddlsim.parser_independent import Conjunction, Predicate, Literal
+from grid import Grid
 
 
 class SimpleFootballExecutor(Executor):
@@ -17,6 +18,9 @@ class SimpleFootballExecutor(Executor):
         # The plan.
         self.P = plan
 
+        # Create the football grid.
+        self.grid = Grid()
+
         # Stack.
         self.S = []
 
@@ -27,8 +31,7 @@ class SimpleFootballExecutor(Executor):
         self.services = services
 
     def next_action(self):
-        pass
-        # self._first_block()
+        self._first_block()
 
     def _first_block(self):
         """
@@ -40,16 +43,55 @@ class SimpleFootballExecutor(Executor):
         while self._exists_n_in_H():
             A = self._get_all_sequences_in_H()
             C = self._get_all_valid_sequences_in_H(A)
-            self.b = self._choose()
+            self.b = self._choose(C)
             self.S.append(self.b)
 
-    def _choose(self):
-        pass
+    def get_agent_position(self, state):
+        return state['at-robby'].pop()[0]
+
+    def get_balls_positions(self, state):
+        balls = state['at-ball']
+        balls_positions = []
+
+        for ball in balls:
+            tile = self.grid.get_tile(ball[1])
+            balls_positions.append(tile)
+
+        return balls_positions
+
+    def can_kick(self, valid_actions):
+
+        for action in valid_actions:
+            if action.startswith("move"):
+                return True
+
+        return False
+
+    def _choose(self, C):
+        # if len(C) == 0:
+        #     return None
+
+        current_state = self.services.perception.get_state()
+        agent_position = self.get_agent_position(current_state)
+        balls_positions = self.get_balls_positions(current_state)
+
+        valid_actions = self.services.valid_actions.get()
+
+        # Check if there are valid actions to take.
+        if valid_actions is None:
+            return None
+
+        if self.can_kick(valid_actions):
+            # TODO choose which ball to kick(if next to more than one), then choose where to kick
+            pass
+        else:
+            # TODO find where is the nearest ball, move towards it
+            pass
 
     def _exists_n_in_H(self):
         sequential_children = self.b.sequentialFollowers
         for n in sequential_children:
-            if n in self.P:
+            if n in self.P.nodes:
                 return True
         return False
 
@@ -57,24 +99,41 @@ class SimpleFootballExecutor(Executor):
         sequential_children = self.b.sequentialFollowers
         children_in_H = []
         for n in sequential_children:
-            if n in self.P:
+            if n in self.P.nodes:
                 children_in_H.append(n)
         return children_in_H
+
+    def _precondition_to_predicate(self, preconditions):
+        for precond in preconditions:
+            pred_stuff = precond.split()
+            signature = tuple(pred_stuff[1:])
+            negated = True if preconditions[precond][0] == "True" else False
+            predicate = Predicate(pred_stuff[0], signature, negated)
+
+            return predicate
 
     def _get_all_valid_sequences_in_H(self, A):
         valid_sequences = []
         current_state = self.services.perception.get_state()
 
         for a in A:
-            preconditions = Conjunction(a.preConds)
+
+            # Creating the conjunction that will be passed to the test_condition method.
+            predicate = self._precondition_to_predicate(a.preConds)
+
+            # If there are no preconditions, no need to keep checking.
+            if predicate is None:
+                continue
+
+            literal = Literal(predicate, predicate.signature)
+            conjunction = Conjunction(literal)
 
             # TODO maybe get the current state inside the loop
             # TODO check if test_condition returns a boolean
-            if self.services.pddl.test_condition(preconditions, current_state):
+            if self.services.pddl.test_condition(conjunction, current_state):
                 valid_sequences.append(a)
 
         return valid_sequences
-
 
 
 # def exists_n_in_H(b, H):
@@ -133,8 +192,6 @@ if __name__ == "__main__":
     # Problem file.
     problem_file = sys.argv[3]
 
-
-
     # Check which plan to use.
     if flag == "-s":
         plan_path = "simple_football_plan.xml"
@@ -157,4 +214,3 @@ if __name__ == "__main__":
         executor = None
 
     print LocalSimulator(local).run(domain_path, problem_path, executor)
-

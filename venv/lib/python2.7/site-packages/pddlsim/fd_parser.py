@@ -30,7 +30,9 @@ class FDParser(PDDL):
     @staticmethod
     def convert_condition(condition):
         if isinstance(condition, pddl.Literal):
-            return Literal(condition.predicate, condition.args)
+            literal = Literal(condition.predicate, condition.args)
+            return literal if not condition.negated else Not(literal)
+
         sub_conditions = [FDParser.convert_condition(sub_condition)
                           for sub_condition in condition.parts]
         if isinstance(condition, pddl.Conjunction):
@@ -49,6 +51,6 @@ class FDParser(PDDL):
                 dellist.append(effect.literal.key)
             else:
                 addlist.append(effect.literal.key)
-        precondition = [Predicate(pred.predicate, pred.args)
+        precondition = [Predicate(pred.predicate, pred.args, pred.negated)
                         for pred in action.precondition.parts]
         return Action(action.name, signature, addlist, dellist, precondition)
