@@ -69,7 +69,6 @@ class SimpleFootballExecutor(Executor):
         return False
 
     def _choose_best_kick(self, balls_positions, valid_actions):
-
         shortest_distance = float("inf")
         best_kick = None
 
@@ -91,16 +90,57 @@ class SimpleFootballExecutor(Executor):
 
         return best_kick
 
-    def _choose_best_move(self, agent_position, valid_actions, balls_positions):
+    def _find_nearest_ball(self, agent_position, balls_positions):
+        """
+        Finds the nearest ball to the agent.
+        :param agent_position: agent's position
+        :param balls_positions: list of balls positions of object Tile
+        :return: Tile
+        """
         shortest_distance = float("inf")
-        best_kick = None
+        nearest_ball = None
+
+        for ball in balls_positions:
+
+            # Calculate the distance between the agent and the ball.
+            distance = self.grid.get_distance(agent_position, ball)
+
+            # Check if the current ball is the closest of all the previous ones.
+            if distance < shortest_distance:
+                shortest_distance = distance
+                nearest_ball = ball
+
+        return nearest_ball
+
+    def _choose_best_move(self, agent_position, valid_actions, balls_positions):
+        """
+        Finds the move that gets the agent the closest to the nearest ball.
+        :param agent_position: agent's position
+        :param valid_actions: list of valid actions
+        :param balls_positions: list of balls positions
+        :return: best move action
+        """
+        shortest_distance = float("inf")
+        best_move = None
 
         for action in valid_actions:
 
             # Check if the action is "kick".
             if action.startswith("move"):
-                next_tile = action.split()[2]
+                # TODO find the move that gets the agent the closest to the nearest ball
+                ball = self._find_nearest_ball(agent_position, balls_positions)
+                next_tile_name = action.split()[2]
+                next_tile = self.grid.get_tile(next_tile_name)
 
+                # Calculate the distance between the agent and the ball.
+                distance = self.grid.get_distance(next_tile, ball)
+
+                # Check if the current ball is the closest of all the previous ones.
+                if distance < shortest_distance:
+                    shortest_distance = distance
+                    best_move = action
+
+        return best_move
 
     def _choose(self, C):
         # if len(C) == 0:
@@ -117,6 +157,7 @@ class SimpleFootballExecutor(Executor):
         agent_position = self._get_agent_position(current_state)
         balls_positions = self._get_balls_positions(current_state)
 
+        # Check if the agent can kick, else move
         if self.can_kick(valid_actions):
             kick = self._choose_best_kick(balls_positions, valid_actions)
             # TODO choose which ball to kick(if next to more than one), then choose where to kick
@@ -124,6 +165,7 @@ class SimpleFootballExecutor(Executor):
         else:
             # TODO find where is the nearest ball, move towards it
             move = self._choose_best_move(agent_position, valid_actions, balls_positions)
+            return move
 
     def _exists_n_in_H(self):
         sequential_children = self.b.sequentialFollowers
@@ -162,6 +204,7 @@ class SimpleFootballExecutor(Executor):
             if predicate is None:
                 continue
 
+            # TODO the predicate.signature is wrong, change it
             literal = Literal(predicate, predicate.signature)
             conjunction = Conjunction(literal)
 
