@@ -16,33 +16,44 @@ class SimpleFootballExecutor(Executor):
         super(SimpleFootballExecutor, self).__init__()
 
         # Number of balls on the field.
-        self.num_of_balls = num_of_balls
+        self.num_of_balls_left = num_of_balls
 
         # The plan.
         self.P = plan
 
         # Create the football grid.
         self.grid = Grid()
-        self.goal_position = self.grid.get_tile("goal-tile")
+        self.goal_position = self.grid.get_tile("goal_tile").get_name()
+
+        # Flag indicating whether the action performed is a kick.
+        self.performing_kick_to_goal = False
 
         # Stack.
         self.S = []
 
         # The initial behavior.
         self.b = self.P.getNode("score_goal")
+        self.S.append(self.b)
 
     def initialize(self, services):
         self.services = services
 
     def next_action(self):
 
-        if self.num_of_balls == 0:
+        # Check if the previous action performed is a kick.
+        if self.performing_kick_to_goal:
+            self.num_of_balls_left -= 1
+            self.performing_kick_to_goal = False
+
+        # Check if there are balls left to score.
+        if self.num_of_balls_left == 0:
             return None
 
         self._first_block()
-        self.b = self.S.pop()
+        action = self.S.pop()
+        self.b = self.S[-1]
 
-        return self.b
+        return action
 
     def _first_block(self):
         """
@@ -50,34 +61,12 @@ class SimpleFootballExecutor(Executor):
         Lines 1-8.
         :return: None
         """
-        self.S.append(self.b)
 
         while self._exists_n_in_H():
             A = self._get_all_sequences_in_H()
             C = self._get_all_valid_sequences_in_H(A)
             self.b = self._choose(C)
             self.S.append(self.b)
-
-    # def _update(self):
-    #     pass
-    #
-    # def _revise(self):
-    #     pass
-    #
-    # def _check_termconditions(self):
-    #     pass
-    #
-    # def _third_block(self):
-    #     """
-    #     Lines 11-15.
-    #     :return: None
-    #     """
-    #     E = []
-    #
-    #     while len(E) == 0:
-    #         K = self._update()
-    #         W = self._revise()
-    #         E = self._check_termconditions()
 
     def _get_agent_position(self, state):
         """
@@ -99,7 +88,11 @@ class SimpleFootballExecutor(Executor):
 
         for ball in balls:
             tile = self.grid.get_tile(ball[1])
-            balls_positions[tile.get_name()] = tile
+            tile_name = tile.get_name()
+
+            # Check if the ball wasn't already scored.
+            if tile_name != "goal_tile":
+                balls_positions[tile_name] = tile
 
         return balls_positions
 
@@ -116,7 +109,7 @@ class SimpleFootballExecutor(Executor):
 
         return False
 
-    def _choose_best_kick(self, balls_positions, valid_actions):
+    def _choose_best_kick(self, valid_actions):
         """
         Chooses the best kick action the agent can take.
         :param balls_positions: list of balls positions
@@ -131,11 +124,10 @@ class SimpleFootballExecutor(Executor):
 
             # Check if the action is "kick".
             if action[0] == "kick":
-                name_of_ball = action[1]
-                ball = balls_positions[name_of_ball]
+                next_ball_position = action[3]
 
                 # Calculate the distance of the resulted kick to the goal tile.
-                distance = self.grid.get_distance(ball, self.goal_position)
+                distance = self.grid.get_distance(next_ball_position, self.goal_position)
 
                 # Check if the position of the ball after the kick is closer to the goal.
                 if distance < shortest_distance:
@@ -214,7 +206,11 @@ class SimpleFootballExecutor(Executor):
 
         # Check if the agent can kick, else move
         if self.can_kick(valid_actions):
-            action = self._choose_best_kick(balls_positions, valid_actions)
+            action = self._choose_best_kick(valid_actions)
+
+            # Check if kicking to the goal tile.
+            if action[3] == "goal_tile":
+                self.performing_kick_to_goal = True
             # TODO choose which ball to kick(if next to more than one), then choose where to kick
         else:
             # TODO find where is the nearest ball, move towards it
@@ -247,18 +243,6 @@ class SimpleFootballExecutor(Executor):
                 children_in_H.append(n)
         return children_in_H
 
-    # def _precondition_to_predicate(self, preconditions):
-    #     predicates = []
-    #
-    #     for precond in preconditions:
-    #         pred_stuff = precond.split()
-    #         signature = tuple(pred_stuff[1:])
-    #         negated = True if preconditions[precond][0] == "True" else False
-    #         predicate = Predicate(pred_stuff[0], signature, negated)
-    #         predicates.append(predicate)
-    #
-    #     return predicates
-
     def _convert_str_actions_to_tuples(self, str_actions):
         tupled_actions = []
 
@@ -267,17 +251,6 @@ class SimpleFootballExecutor(Executor):
             tupled_actions.append(tuple(splitted_action))
 
         return tupled_actions
-    #
-    # def _get_valid_args(self, action_name):
-    #
-    #     valid_actions = self._convert_str_actions_to_tuples(self.services.valid_actions.get())
-    #     valid_args = []
-    #
-    #     for action in valid_actions:
-    #         if action[0] == action_name:
-    #             valid_args.append(action[1:])
-    #
-    #     return valid_args
 
     def _exists_behavior(self, action, hierarchical_behaviors):
         """
@@ -302,77 +275,6 @@ class SimpleFootballExecutor(Executor):
                 valid_actions_for_behaviors.append(action)
 
         return valid_actions_for_behaviors
-        # valid_sequences = []
-        # current_state = self.services.perception.get_state()
-        #
-        # for a in A:
-        #
-        #     # Creating the conjunction that will be passed to the test_condition method.
-        #     predicates = self._precondition_to_predicate(a.preConds)
-        #
-        #     # If there are no preconditions, no need to keep checking.
-        #     if len(predicates) == 0:
-        #         continue
-        #
-        #     valid_args = self._get_valid_args(a.action)
-        #
-        #     for args in valid_args:
-        #         # TODO the predicate.signature is wrong, change it
-        #         literal = Literal(predicate.name, args)
-        #         conjunction = Conjunction([literal])
-        #
-        #         # TODO maybe get the current state inside the loop
-        #         # TODO check if test_condition returns a boolean
-        #         t = self.services.pddl.test_condition(conjunction, current_state)
-        #         if self.services.pddl.test_condition(conjunction, current_state):
-        #             valid_sequences.append(a)
-        #
-        # return valid_sequences
-
-
-# def exists_n_in_H(b, H):
-#     sequential_children = b.sequentialFollowers
-#     for n in sequential_children:
-#         if n in H:
-#             return True
-#     return False
-#
-# def get_all_sequentials_in_H(b, H):
-#     sequential_children = b.sequentialFollowers
-#     children_in_H = []
-#
-#     for n in sequential_children:
-#         if n in H:
-#             children_in_H.append(n)
-#
-#     return children_in_H
-#
-# def get_all_valid_sequentials_in_H(A):
-#     valid_sequentials = []
-#    # current_state = self.services.perception.get_state()
-#
-#     for a in A:
-#         #temp_state = current_state
-#         #self.services.pddl.apply_action_to_state(option, future_state)
-#
-#
-#
-# def BIS(P):
-#
-#     # Stack.
-#     S = []
-#
-#     # Initial node.
-#     # TODO should I get the initial behavior dynamically?
-#     b = P.getNode("score_goal")
-#     S.append(b)
-#
-#     while exists_n_in_H(b, plan):
-#         A = get_all_sequentials_in_H(b, plan)
-#         C = get_all_valid_sequentials_in_H(A)
-#
-#
-#
 
 
 if __name__ == "__main__":
@@ -381,7 +283,7 @@ if __name__ == "__main__":
     flag = sys.argv[1]
 
     # Number of balls.
-    N = sys.argv[2]
+    N = int(sys.argv[2])
 
     # Problem file.
     problem_file = sys.argv[3]
