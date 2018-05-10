@@ -242,22 +242,35 @@ class SimpleFootballExecutor(Executor):
         return children_in_H
 
     def _precondition_to_predicate(self, preconditions):
+        predicates = []
+
         for precond in preconditions:
             pred_stuff = precond.split()
             signature = tuple(pred_stuff[1:])
             negated = True if preconditions[precond][0] == "True" else False
             predicate = Predicate(pred_stuff[0], signature, negated)
+            predicates.append(predicate)
 
-            return predicate
+        return predicates
+
+    def _convert_str_actions_to_tuples(self, str_actions):
+        tupled_actions = []
+
+        for action in str_actions:
+            splitted_action = action[1:-1].split()
+            tupled_actions.append(tuple(splitted_action))
+
+        return tupled_actions
+
 
     def _get_valid_args(self, action_name):
 
-        valid_actions = self.services.valid_actions.get()
+        valid_actions = self._convert_str_actions_to_tuples(self.services.valid_actions.get())
         valid_args = []
 
         for action in valid_actions:
-            if action.startswith(action_name):
-                valid_args.append(action.split()[1:])
+            if action[0] == action_name:
+                valid_args.append(action[1:])
 
         return valid_args
 
@@ -269,21 +282,22 @@ class SimpleFootballExecutor(Executor):
         for a in A:
 
             # Creating the conjunction that will be passed to the test_condition method.
-            predicate = self._precondition_to_predicate(a.preConds)
+            predicates = self._precondition_to_predicate(a.preConds)
 
             # If there are no preconditions, no need to keep checking.
-            if predicate is None:
+            if len(predicates) == 0:
                 continue
 
-            valid_args = self._get_valid_args(a)
+            valid_args = self._get_valid_args(a.action)
 
             for args in valid_args:
                 # TODO the predicate.signature is wrong, change it
-                literal = Literal(predicate, args)
-                conjunction = Conjunction(literal)
+                literal = Literal(predicate.name, args)
+                conjunction = Conjunction([literal])
 
                 # TODO maybe get the current state inside the loop
                 # TODO check if test_condition returns a boolean
+                t = self.services.pddl.test_condition(conjunction, current_state)
                 if self.services.pddl.test_condition(conjunction, current_state):
                     valid_sequences.append(a)
 
