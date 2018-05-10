@@ -45,11 +45,11 @@ class Grid(object):
         """
         Constructor.
         """
-        self.tiles = [Tile('start-tile', 1, 0),
+        self.tiles = [Tile('start_tile', 1, 0),
                       Tile('g0', 0, 1), Tile('g1', 0, 2), Tile('g2', 0, 3), Tile('g3', 0, 4),
                       Tile('c0', 1, 1), Tile('c1', 1, 2), Tile('c2', 1, 3), Tile('c3', 1, 4),
                       Tile('d0', 2, 1), Tile('d1', 2, 2), Tile('d2', 2, 3), Tile('d3', 2, 4),
-                      Tile('goal-tile', 1, 5)]
+                      Tile('goal_tile', 1, 5)]
 
     def get_tile(self, name):
         """
@@ -75,4 +75,4 @@ class Grid(object):
         tile2 = self.get_tile(tile2_name)
 
         return abs(tile1.get_x_coordinate() - tile2.get_x_coordinate()) + abs(
-            tile1.get_y_coordinate() - tile2.get_y_coordinate)
+            tile1.get_y_coordinate() - tile2.get_y_coordinate())
