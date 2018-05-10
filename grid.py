@@ -37,8 +37,14 @@ class Tile(object):
 
 
 class Grid(object):
+    """
+    Represents a 12 Tile football grid.
+    """
 
     def __init__(self):
+        """
+        Constructor.
+        """
         self.tiles = [Tile('start-tile', 1, 0),
                       Tile('g0', 0, 1), Tile('g1', 0, 2), Tile('g2', 0, 3), Tile('g3', 0, 4),
                       Tile('c0', 1, 1), Tile('c1', 1, 2), Tile('c2', 1, 3), Tile('c3', 1, 4),
