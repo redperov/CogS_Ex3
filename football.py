@@ -7,19 +7,22 @@ from pddlsim.parser_independent import Conjunction, Predicate, Literal
 from grid import Grid
 
 
-class SimpleFootballExecutor(Executor):
+class FootballExecutor(Executor):
     """
-    A simple football executor.
+    A football executor.
     """
 
-    def __init__(self, plan, num_of_balls):
-        super(SimpleFootballExecutor, self).__init__()
+    def __init__(self, plan, num_of_balls, flag):
+        super(FootballExecutor, self).__init__()
+
+        # The plan.
+        self.P = plan
 
         # Number of balls on the field.
         self.num_of_balls_left = num_of_balls
 
-        # The plan.
-        self.P = plan
+        # Indicating the type of the problem.
+        self.flag = flag
 
         # Create the football grid.
         self.grid = Grid()
@@ -32,7 +35,7 @@ class SimpleFootballExecutor(Executor):
         self.S = []
 
         # The initial behavior.
-        self.b = self.P.getNode("score_goal")
+        self.b = self.P.nodes.pop(0)
         self.S.append(self.b)
 
     def initialize(self, services):
@@ -173,7 +176,8 @@ class SimpleFootballExecutor(Executor):
 
             # Check if the action is "kick".
             if action[0] == "move":
-                # TODO find the move that gets the agent the closest to the nearest ball
+
+                # Find the nearest ball.
                 ball = self._find_nearest_ball(agent_position, balls_positions)
                 next_tile = action[2]
 
@@ -187,10 +191,10 @@ class SimpleFootballExecutor(Executor):
 
         return best_move
 
-    def _choose(self, valid_actions):
+    def _simple_choose(self, valid_actions):
         """
         The simple football domain choose action.
-        :param valid_behaviors: list of valid behaviors as tuples
+        :param valid_actions: list of valid actions as tuples
         :return: action
         """
         # Check if there are valid actions to choose from.
@@ -206,20 +210,43 @@ class SimpleFootballExecutor(Executor):
 
         # Check if the agent can kick, else move
         if self.can_kick(valid_actions):
+
+            # Choose which ball to kick(if next to more than one), then choose where to kick.
             action = self._choose_best_kick(valid_actions)
 
             # Check if kicking to the goal tile.
             if action[3] == "goal_tile":
                 self.performing_kick_to_goal = True
-            # TODO choose which ball to kick(if next to more than one), then choose where to kick
         else:
-            # TODO find where is the nearest ball, move towards it
+
+            # Find where is the nearest ball and move towards it.
             action = self._choose_best_move(agent_position, valid_actions, balls_positions)
 
         # Convert action tuple to string.
         str_action = "({0})".format(" ".join(action))
 
         return str_action
+
+    def _extended_choose(self, valid_actions):
+        """
+        The extended football domain choose action.
+        :param valid_actions: list of valid actions as tuples
+        :return: action
+        """
+        pass
+
+    def _choose(self, valid_actions):
+        """
+        Decides which choose method to use.
+        :param valid_actions: list of valid actions as tuples.
+        :return: action
+        """
+        if self.flag == "-s":
+            return self._simple_choose(valid_actions)
+        elif self.flag == "-e":
+            return self._extended_choose(valid_actions)
+        else:
+            return None
 
     def _exists_n_in_H(self):
 
@@ -244,6 +271,11 @@ class SimpleFootballExecutor(Executor):
         return children_in_H
 
     def _convert_str_actions_to_tuples(self, str_actions):
+        """
+        Converts actions in string representation to tuples.
+        :param str_actions: list of actions as strings
+        :return: list of actions as tuples
+        """
         tupled_actions = []
 
         for action in str_actions:
@@ -293,20 +325,19 @@ if __name__ == "__main__":
         plan_path = "simple_football_plan.xml"
         domain_path = "simple_football_domain.pddl"
         problem_path = "simple_football_problem.pddl"
-
-        # Get the plan.
-        plan = PlanParser(plan_path).getPlan()
-
-        executor = SimpleFootballExecutor(plan, N)
     elif flag == "-e":
         plan_path = "extended_football_plan.xml"
         domain_path = "extended_football_domain.pddl"
         problem_path = "simple_football_problem.pddl"
-        executor = None  # ExtendedFootballExecutor()
     else:
         plan_path = ""
         domain_path = ""
         problem_path = ""
-        executor = None
+
+    # Get the plan.
+    plan = PlanParser(plan_path).getPlan()
+
+    # Create the executor.
+    executor = FootballExecutor(plan, N, flag)
 
     print LocalSimulator(local).run(domain_path, problem_path, executor)
