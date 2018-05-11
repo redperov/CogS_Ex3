@@ -107,7 +107,7 @@ class FootballExecutor(Executor):
         """
 
         for action in valid_actions:
-            if action[0] == "kick":
+            if action[0].startswith("kick"):
                 return True
 
         return False
@@ -115,7 +115,6 @@ class FootballExecutor(Executor):
     def _choose_best_kick(self, valid_actions):
         """
         Chooses the best kick action the agent can take.
-        :param balls_positions: list of balls positions
         :param valid_actions: list of valid actions
         :return: best kick action
         """
@@ -233,7 +232,34 @@ class FootballExecutor(Executor):
         :param valid_actions: list of valid actions as tuples
         :return: action
         """
-        pass
+        # Check if there are valid actions to choose from.
+        if len(valid_actions) == 0:
+            return None
+
+        # Get the agent's position.
+        current_state = self.services.perception.get_state()
+        agent_position = self._get_agent_position(current_state)
+
+        # Get the balls' positions.
+        balls_positions = self._get_balls_positions(current_state)
+
+        # Check if the agent can kick, else move
+        # TODO can't use this, can only kick with the lifted leg
+        if self.can_kick(valid_actions):
+
+            # Choose which ball to kick(if next to more than one), then choose where to kick.
+            action = self._choose_best_kick(valid_actions)
+
+            # Check if kicking to the goal tile.
+            if action[3] == "goal_tile":
+                self.performing_kick_to_goal = True
+        else:
+
+            # Find where is the nearest ball and move towards it.
+            action = self._choose_best_move(agent_position, valid_actions, balls_positions)
+
+        # Convert action tuple to string.
+        str_action = "({0})".format(" ".join(action))
 
     def _choose(self, valid_actions):
         """
@@ -292,7 +318,7 @@ class FootballExecutor(Executor):
         :return: boolean
         """
         for behavior in hierarchical_behaviors:
-            if behavior.action == action[0]:
+            if action[0].startswith(behavior.action):
                 return True
 
         return False
@@ -318,19 +344,16 @@ if __name__ == "__main__":
     N = int(sys.argv[2])
 
     # Problem file.
-    problem_file = sys.argv[3]
+    plan_path = sys.argv[3]
 
     # Check which plan to use.
     if flag == "-s":
-        plan_path = "simple_football_plan.xml"
         domain_path = "simple_football_domain.pddl"
         problem_path = "simple_football_problem.pddl"
     elif flag == "-e":
-        plan_path = "extended_football_plan.xml"
         domain_path = "extended_football_domain.pddl"
-        problem_path = "simple_football_problem.pddl"
+        problem_path = "extended_football_problem.pddl"
     else:
-        plan_path = ""
         domain_path = ""
         problem_path = ""
 
