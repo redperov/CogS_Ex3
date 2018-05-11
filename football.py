@@ -35,7 +35,7 @@ class FootballExecutor(Executor):
         self.S = []
 
         # The initial behavior.
-        self.b = self.P.nodes.pop(0)
+        self.b = self.P.nodes[0]
         self.S.append(self.b)
 
     def initialize(self, services):
