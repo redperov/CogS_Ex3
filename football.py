@@ -103,17 +103,24 @@ class FootballExecutor(Executor):
 
         return balls_positions
 
-    def can_kick(self, valid_actions):
-        """
-        Checks if the agent can perform a kick.
-        :param valid_actions: list of valid actions
-        :return: boolean
-        """
+    # def can_kick(self, valid_actions):
+    #     """
+    #     Checks if the agent can perform a kick.
+    #     :param valid_actions: list of valid actions
+    #     :return: boolean
+    #     """
+    #
+    #     for action in valid_actions:
+    #         if action[0].startswith("kick"):
+    #             return True
+    #
+    #     return False
 
-        for action in valid_actions:
-            if action[0].startswith("kick"):
+    def can_kick(self, agent_position, balls_positions):
+        # TODO return the previous method if this doesn't work
+        for ball_position in balls_positions:
+            if self.grid.get_distance(agent_position, ball_position) == 0:
                 return True
-
         return False
 
     def _choose_best_kick(self, valid_actions):
@@ -294,7 +301,7 @@ class FootballExecutor(Executor):
         lift_action_name = "lift-{0}".format(leg_to_lift)
 
         for action in valid_actions:
-            if action.startswith(lift_action_name):
+            if action[0] == lift_action_name:
                 return action
 
         return None
@@ -344,7 +351,7 @@ class FootballExecutor(Executor):
         balls_positions = self._get_balls_positions(current_state)
 
         # Check if the agent can kick, else move
-        if self.can_kick(valid_actions):
+        if self.can_kick(agent_position, balls_positions):
 
             # TODO first, if the leg is not raised, raise it
             # TODO if the leg is raised, kick with it
@@ -356,7 +363,10 @@ class FootballExecutor(Executor):
                 # Generate lift action.
                 # TODO check if the lift action doesn't exist in the valid actions on purpose
                 # TODO change this to the _choose_leg_to_lift()
-                action = ("lift-{0}".format(leg_to_lift), leg_to_lift)
+                # action = ("lift-{0}".format(leg_to_lift), leg_to_lift)
+
+                # Choose lift action
+                action = self._choose_lift_action(leg_to_lift, valid_actions)
 
                 self.lifted_leg = leg_to_lift
             else:
