@@ -31,6 +31,12 @@ class FootballExecutor(Executor):
         # Flag indicating whether the action performed is a kick.
         self.performing_kick_to_goal = False
 
+        self.right_leg_position = None
+        self.left_leg_position = None
+        self.last_leg_moved = None
+        self.lifted_leg = None
+
+
         # Stack.
         self.S = []
 
@@ -173,7 +179,7 @@ class FootballExecutor(Executor):
 
         for action in valid_actions:
 
-            # Check if the action is "kick".
+            # Check if the action is "move".
             if action[0] == "move":
 
                 # Find the nearest ball.
@@ -226,6 +232,66 @@ class FootballExecutor(Executor):
 
         return str_action
 
+    def _choose_leg_to_move_with(self):
+        """
+        Chooses a leg with which the agent can move.
+        :return: leg
+        """
+        # TODO maybe make a smarter decision if can use both legs
+        if self.last_leg_moved == "left":
+            return "right"
+        else:
+            return "left"
+
+    def _choose_best_move_with_leg(self, leg_to_move_with, agent_position, valid_actions, balls_positions):
+        """
+        Finds the move with the given leg that gets the agent the closest to the nearest ball.
+        :param leg_to_move_with: leg with which the agent will move
+        :param agent_position: agent's position
+        :param valid_actions: list of valid actions
+        :param balls_positions: list of balls positions
+        :return: best move action
+        """
+        shortest_distance = float("inf")
+        best_move = None
+        move_action_name = "move-{0}-leg".format(leg_to_move_with)
+
+        for action in valid_actions:
+
+            # Check if the action is "move".
+            if action[0] == move_action_name:
+
+                # Find the nearest ball.
+                ball = self._find_nearest_ball(agent_position, balls_positions)
+                next_tile = action[2]
+
+                # Calculate the distance between the agent and the ball.
+                distance = self.grid.get_distance(next_tile, ball)
+
+                # Check if the current ball is the closest of all the previous ones.
+                if distance < shortest_distance:
+                    shortest_distance = distance
+                    best_move = action
+
+        return best_move
+
+    def _choose_leg_to_lift(self):
+        """
+        Chooses a leg to lift for a kick.
+        :return: leg
+        """
+        # TODO maybe make a smarter decision if can use both legs
+        if self.last_leg_moved == "left":
+            return "right"
+        else:
+            return "left"
+
+    def _choose_lift_action(self, leg_to_lift, valid_actions):
+        lift_action = None
+
+        for action in valid_actions:
+
+
     def _extended_choose(self, valid_actions):
         """
         The extended football domain choose action.
@@ -244,22 +310,40 @@ class FootballExecutor(Executor):
         balls_positions = self._get_balls_positions(current_state)
 
         # Check if the agent can kick, else move
-        # TODO can't use this, can only kick with the lifted leg
         if self.can_kick(valid_actions):
 
-            # Choose which ball to kick(if next to more than one), then choose where to kick.
-            action = self._choose_best_kick(valid_actions)
+            # TODO first, if the leg is not raised, raise it
+            # TODO if the leg is raised, kick with it
+
+            if self.lifted_leg is None:
+                leg_to_lift = self._choose_leg_to_lift()
+                action = self._choose_lift_action(leg_to_lift, valid_actions)
+
+                self.lifted_leg = leg_to_lift
+            else:
+                # Choose which ball to kick(if next to more than one), then choose where to kick.
+                action = self._choose_best_kick(valid_actions)
 
             # Check if kicking to the goal tile.
             if action[3] == "goal_tile":
                 self.performing_kick_to_goal = True
         else:
 
+            # TODO first choose a leg with which it can move(remember which leg was used the last time)
+            # TODO then choose the move with that leg that will get the agent the closest to the ball
+
+            leg_to_move_with = self._choose_leg_to_move_with()
+            action = self._choose_best_move_with_leg(leg_to_move_with, agent_position, valid_actions, balls_positions)
+
+            self.last_leg_moved = leg_to_move_with
+
             # Find where is the nearest ball and move towards it.
-            action = self._choose_best_move(agent_position, valid_actions, balls_positions)
+            # action = self._choose_best_move(agent_position, valid_actions, balls_positions)
 
         # Convert action tuple to string.
         str_action = "({0})".format(" ".join(action))
+
+        return str_action
 
     def _choose(self, valid_actions):
         """
