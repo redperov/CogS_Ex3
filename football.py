@@ -56,33 +56,23 @@ class FootballExecutor(Executor):
         if self.num_of_balls_left == 0:
             return None
 
-        # self._first_block()
+        self._first_block()
+        action = self.S.pop()
+        self.b = self.S[-1]
+
+        return action
+
+    def _first_block(self):
+        """
+        The first part of the BIS algorithm.
+        :return: None
+        """
 
         while self._exists_n_in_H():
             A = self._get_all_sequences_in_H()
             C = self._get_all_valid_sequences_in_H(A)
             self.b = self._choose(C)
             self.S.append(self.b)
-
-
-
-        action = self.S.pop()
-        self.b = self.S[-1]
-
-        return action
-
-    # def _first_block(self):
-    #     """
-    #     The first part of the BIS algorithm.
-    #     Lines 1-8.
-    #     :return: None
-    #     """
-    #
-    #     while self._exists_n_in_H():
-    #         A = self._get_all_sequences_in_H()
-    #         C = self._get_all_valid_sequences_in_H(A)
-    #         self.b = self._choose(C)
-    #         self.S.append(self.b)
 
     def _get_agent_position(self, state):
         """
@@ -126,7 +116,6 @@ class FootballExecutor(Executor):
     #     return False
 
     def can_kick(self, agent_position, balls_positions):
-        # TODO return the previous method if this doesn't work
         for ball_position in balls_positions:
             if self.grid.get_distance(agent_position, ball_position) == 0:
                 return True
@@ -228,7 +217,7 @@ class FootballExecutor(Executor):
         balls_positions = self._get_balls_positions(current_state)
 
         # Check if the agent can kick, else move
-        if self.can_kick(valid_actions):
+        if self.can_kick(agent_position, balls_positions):
 
             # Choose which ball to kick(if next to more than one), then choose where to kick.
             action = self._choose_best_kick(valid_actions)
@@ -251,7 +240,6 @@ class FootballExecutor(Executor):
         Chooses a leg with which the agent can move.
         :return: leg
         """
-        # TODO maybe make a smarter decision if can use both legs
         if self.last_leg_moved == "left":
             return "right"
         else:
@@ -294,7 +282,6 @@ class FootballExecutor(Executor):
         Chooses a leg to lift for a kick.
         :return: leg
         """
-        # TODO maybe make a smarter decision if can use both legs
         if self.last_leg_moved == "left":
             return "right"
         else:
@@ -362,20 +349,15 @@ class FootballExecutor(Executor):
         # Check if the agent can kick, else move
         if self.can_kick(agent_position, balls_positions):
 
-            # TODO first, if the leg is not raised, raise it
-            # TODO if the leg is raised, kick with it
-
             # Check if a leg was lifted for a kick.
             if self.lifted_leg is None:
                 leg_to_lift = self._choose_leg_to_lift()
 
                 # Generate lift action.
-                # TODO check if the lift action doesn't exist in the valid actions on purpose
-                # TODO change this to the _choose_leg_to_lift()
-                action = ("lift-{0}".format(leg_to_lift), leg_to_lift)
+                # action = ("lift-{0}".format(leg_to_lift), leg_to_lift)
 
                 # Choose lift action
-                # action = self._choose_lift_action(leg_to_lift, valid_actions)
+                action = self._choose_lift_action(leg_to_lift, valid_actions)
 
                 self.lifted_leg = leg_to_lift
             else:
@@ -389,9 +371,6 @@ class FootballExecutor(Executor):
                 if action[3] == "goal_tile":
                     self.performing_kick_to_goal = True
         else:
-
-            # TODO first choose a leg with which it can move(remember which leg was used the last time)
-            # TODO then choose the move with that leg that will get the agent the closest to the ball
 
             # Choose a leg to move with.
             leg_to_move_with = self._choose_leg_to_move_with()
@@ -469,7 +448,6 @@ class FootballExecutor(Executor):
         return False
 
     def _get_all_valid_sequences_in_H(self, hierarchical_behaviors):
-        # TODO should I use test_condition instead?
         all_valid_actions = self._convert_str_actions_to_tuples(self.services.valid_actions.get())
         valid_actions_for_behaviors = []
 
