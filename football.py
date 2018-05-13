@@ -56,24 +56,33 @@ class FootballExecutor(Executor):
         if self.num_of_balls_left == 0:
             return None
 
-        self._first_block()
-        action = self.S.pop()
-        self.b = self.S[-1]
-
-        return action
-
-    def _first_block(self):
-        """
-        The first part of the BIS algorithm.
-        Lines 1-8.
-        :return: None
-        """
+        # self._first_block()
 
         while self._exists_n_in_H():
             A = self._get_all_sequences_in_H()
             C = self._get_all_valid_sequences_in_H(A)
             self.b = self._choose(C)
             self.S.append(self.b)
+
+
+
+        action = self.S.pop()
+        self.b = self.S[-1]
+
+        return action
+
+    # def _first_block(self):
+    #     """
+    #     The first part of the BIS algorithm.
+    #     Lines 1-8.
+    #     :return: None
+    #     """
+    #
+    #     while self._exists_n_in_H():
+    #         A = self._get_all_sequences_in_H()
+    #         C = self._get_all_valid_sequences_in_H(A)
+    #         self.b = self._choose(C)
+    #         self.S.append(self.b)
 
     def _get_agent_position(self, state):
         """
@@ -363,10 +372,10 @@ class FootballExecutor(Executor):
                 # Generate lift action.
                 # TODO check if the lift action doesn't exist in the valid actions on purpose
                 # TODO change this to the _choose_leg_to_lift()
-                # action = ("lift-{0}".format(leg_to_lift), leg_to_lift)
+                action = ("lift-{0}".format(leg_to_lift), leg_to_lift)
 
                 # Choose lift action
-                action = self._choose_lift_action(leg_to_lift, valid_actions)
+                # action = self._choose_lift_action(leg_to_lift, valid_actions)
 
                 self.lifted_leg = leg_to_lift
             else:
@@ -454,7 +463,7 @@ class FootballExecutor(Executor):
         :return: boolean
         """
         for behavior in hierarchical_behaviors:
-            if action[0].startswith(behavior.action):
+            if action[0].startswith(behavior.action) or action[0].startswith("lift"):
                 return True
 
         return False
